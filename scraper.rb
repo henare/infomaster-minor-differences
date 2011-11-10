@@ -1,8 +1,8 @@
 require 'rubygems'
 require 'mechanize'
 
-starting_url = 'http://applications.randwick.nsw.gov.au/modules/applicationmaster/default.aspx?page=found&1=thismonth&4a=437&6=F'
-comment_url = 'mailto:general.manager@randwick.nsw.gov.au?subject='
+starting_url = 'http://pdonline.moretonbay.qld.gov.au/Modules/ApplicationMaster/default.aspx?page=found&1=thismonth&4a=816&6=F'
+comment_url = 'mailto:mbrc@moretonbay.qld.gov.au?subject='
 
 def clean_whitespace(a)
   a.gsub("\r", ' ').gsub("\n", ' ').squeeze(" ").strip
@@ -13,6 +13,9 @@ def scrape_table(doc, comment_url)
     # Columns in table
     # Show  Number  Submitted  Details
     tds = tr.search('td')
+
+    break if tds[0].inner_text =~ /There were no records/
+
     h = tds.map{|td| td.inner_html}
   
     record = {
@@ -20,7 +23,7 @@ def scrape_table(doc, comment_url)
       'comment_url' => comment_url + CGI::escape("Development Application Enquiry: " + clean_whitespace(h[1])),
       'council_reference' => clean_whitespace(h[1]),
       'date_received' => Date.strptime(clean_whitespace(h[2]), '%d/%m/%Y').to_s,
-      'address' => clean_whitespace(tds[3].at('strong').inner_text),
+      'address' => clean_whitespace(tds[3].at('b').inner_text),
       'description' => CGI::unescapeHTML(clean_whitespace(h[3].split('<br>')[1..-1].join)),
       'date_scraped' => Date.today.to_s
     }
@@ -58,7 +61,7 @@ agent = Mechanize.new
 
 # Jump through bollocks agree screen
 doc = agent.get(starting_url)
-doc = doc.forms.first.submit(doc.forms.first.button_with(:value => "I Agree"))
+doc = doc.forms.first.submit(doc.forms.first.button_with(:value => "Agree"))
 doc = agent.get(starting_url)
 
 scrape_and_follow_next_link(doc, comment_url)
